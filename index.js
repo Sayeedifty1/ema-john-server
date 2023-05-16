@@ -3,7 +3,7 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config()
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
 
@@ -35,15 +35,33 @@ async function run() {
 
 
     app.get('/products', async (req, res) => {
-        const result = await productCollection.find().toArray();
-        res.send(result)
+      console.log(req.query);
+      const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
+
+      const result = await productCollection.find().skip(skip).limit(limit).toArray();
+      res.send(result);
     })
+    
 
     // pagination
     app.get('/totalProducts', async (req, res) => {
-        const result = await productCollection.estimatedDocumentCount();
-        res.send({totalProducts: result});
+      const result = await productCollection.estimatedDocumentCount();
+      res.send({ totalProducts: result });
     })
+
+    // posting data from client side
+    app.post('/productsByIds', async (req, res) => {
+        const ids = req.body;
+        const objectIds = ids.map(id => new ObjectId(id));
+        console.log(ids);
+        const query = { _id: { $in: objectIds } };
+        const result = await productCollection.find(query).toArray();
+        res.send(result);
+    })
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -57,9 +75,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('Ema-john is running') 
+  res.send('Ema-john is running')
 })
 
 app.listen(port, () => {
-    console.log(`ema john server is running on port ${port}`)
+  console.log(`ema john server is running on port ${port}`)
 })
